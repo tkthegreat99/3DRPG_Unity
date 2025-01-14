@@ -10,6 +10,7 @@ public class InputManager
     public Action<Define.MouseEvent> MouseAction = null;
 
     bool _pressed = false;
+    float _pressedTime = 0;
     public void OnUpdate()
     {
         if (EventSystem.current.IsPointerOverGameObject())
@@ -22,14 +23,25 @@ public class InputManager
         {
             if(Input.GetMouseButton(0))
             {
+                if(!_pressed)
+                {
+                    MouseAction.Invoke(Define.MouseEvent.PointerDown);
+                    _pressedTime = Time.time; //유니티에서 관리해주는 시간
+                }
                 MouseAction.Invoke(Define.MouseEvent.Press);
                 _pressed = true;
             }
             else
             {
                 if(_pressed)
-                    MouseAction.Invoke(Define.MouseEvent.Click);
+                {
+                    if(Time.time < _pressedTime + 0.2f)
+                        MouseAction.Invoke(Define.MouseEvent.Click);
+                    MouseAction.Invoke(Define.MouseEvent.PointerUp);
+                }
+                    
                 _pressed = false;
+                _pressedTime = 0;
             }
         }
     }

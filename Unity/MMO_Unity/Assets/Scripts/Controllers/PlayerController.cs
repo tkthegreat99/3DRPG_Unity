@@ -28,8 +28,8 @@ public class PlayerController : MonoBehaviour
         _handicon = Managers.Resource.Load<Texture2D>("Textures/Cursor/Hand");
         _stat = gameObject.GetComponent<PlayerStat>();
 
-        Managers.Input.MouseAction -= OnMouseClicked; //처음에 빼주는 이유은 중복 구독신청 될까봐.
-        Managers.Input.MouseAction += OnMouseClicked;        
+        Managers.Input.MouseAction -= OnMouseEvent; //처음에 빼주는 이유은 중복 구독신청 될까봐.
+        Managers.Input.MouseAction += OnMouseEvent;        
     }
 
 
@@ -67,11 +67,12 @@ public class PlayerController : MonoBehaviour
 
             Debug.DrawRay(transform.position + Vector3.up * 0.5f, dir.normalized, Color.red);
 
-            int _mask = (1 << (int)Define.Layer.Blocking) | (1 << (int)Define.Layer.Monster);
+            int _mask = (1 << (int)Define.Layer.Blocking);
             //LayerMask로 Blocking을 빌딩 등에 적용시키고, RayCast를 통해 플레이어의 방향 앞에 Blocking 이 있을 경우 Idle로 바꾸게.
             if (Physics.Raycast(transform.position + Vector3.up * 0.5f, dir, 1.0f, _mask))
             {
-                _state = PlayerState.Idle;
+                if(Input.GetMouseButton(0) == false)
+                    _state = PlayerState.Idle;
                 return;
             }
 
@@ -120,6 +121,9 @@ public class PlayerController : MonoBehaviour
 
     void UpdateMouseCursor()
     {
+        if (Input.GetMouseButton(0))
+            return;
+
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
                 
         RaycastHit hit;
@@ -147,34 +151,48 @@ public class PlayerController : MonoBehaviour
     }
 
 
-
+    GameObject _locktarget;
 
     //Ground와 Monster를 Layermask
     int _mask = (1 << (int)Define.Layer.Ground) | (1 << (int)Define.Layer.Monster);
-    void OnMouseClicked(Define.MouseEvent evt)
+    void OnMouseEvent(Define.MouseEvent evt)
     {
         if(_state == PlayerState.Die)
             return;
-
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        //Debug.DrawRay(Camera.main.transform.position, ray.direction * 100.0f, Color.red, 1.0f);
-
-        //wall인 경우에만 마우스 입력을 받아서 플레이어가 움직일 수 있게 함.
         RaycastHit hit;
-        if (Physics.Raycast(ray, out hit, 100.0f, _mask))
-        {
-            _destpos = hit.point;
-            _destpos.y = transform.position.y;
-            _state = PlayerState.Moving;
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        bool raycastHit = Physics.Raycast(ray, out hit, 100.0f, _mask);
 
-            if (hit.collider.gameObject.layer == (int)Define.Layer.Monster)
-            {
-                Debug.Log("Monster Clicked!");
-            }
-            else
-            {
-                Debug.Log("Ground Clicked!");
-            }
-        }
+        switch(evt)
+        {
+            case Define.MouseEvent.PointerDown:
+                {
+                    if(raycastHit)
+                    {
+                        _destpos = hit.point;
+                        _destpos.y = transform.position.y;
+                        _state = PlayerState.Moving;
+
+                        if (hit.collider.gameObject.layer == (int)Define.Layer.Monster)
+                            _locktarget = hit.collider.gameObject;
+                        else
+                            _locktarget = null;       
+                    }
+                }
+                break;
+            case Define.MouseEvent.PointerUp:
+                _locktarget = null;
+                break;
+            case Define.MouseEvent.Press:
+                {
+                    if (_locktarget != null)
+                    {
+                        _destpos = _locktarget.transform.position;
+                    }
+                    else if (raycastHit)
+                        _destpos = hit.point;
+                }
+                break;
+        }     
     }
 }
