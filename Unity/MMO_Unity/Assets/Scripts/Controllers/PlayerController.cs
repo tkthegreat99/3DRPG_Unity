@@ -1,3 +1,4 @@
+using Data;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -7,17 +8,16 @@ using UnityEngine.AI;
 
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField]
-    float _speed = 10.0f;
+    PlayerStat _stat;
 
     //bool _moveToDest = false;
     Vector3 _destpos;
     
     void Start()
     {
-        Managers.Input.KeyAction -= OnKeyboard; // 혹시 다른 데서 구독할 수도 있으니까.
-        Managers.Input.KeyAction += OnKeyboard; //구독 신청
-        Managers.Input.MouseAction -= OnMouseClicked;
+        _stat = gameObject.GetComponent<PlayerStat>();
+
+        Managers.Input.MouseAction -= OnMouseClicked; //처음에 빼주는 이유은 중복 구독신청 될까봐.
         Managers.Input.MouseAction += OnMouseClicked;        
     }
 
@@ -27,6 +27,7 @@ public class PlayerController : MonoBehaviour
         Die,
         Moving,
         Idle,
+        Skill,
     }
 
     PlayerState _state= PlayerState.Idle;
@@ -48,7 +49,7 @@ public class PlayerController : MonoBehaviour
         {
             NavMeshAgent nma = gameObject.GetOrAddComponent<NavMeshAgent>();
 
-            float moveDist = Mathf.Clamp(_speed * Time.deltaTime, 0, dir.magnitude);
+            float moveDist = Mathf.Clamp(_stat.MoveSpeed * Time.deltaTime, 0, dir.magnitude);
             
             nma.Move(dir.normalized * moveDist);
 
@@ -72,7 +73,7 @@ public class PlayerController : MonoBehaviour
         //애니메이션
 
         Animator anim = GetComponent<Animator>();
-        anim.SetFloat("speed", _speed);
+        anim.SetFloat("speed", _stat.MoveSpeed);
     }
 
     void OnRunEvent()
@@ -104,31 +105,8 @@ public class PlayerController : MonoBehaviour
                 break;
         }        
     }
-
-    void OnKeyboard()
-    {
-        if (Input.GetKey(KeyCode.W))
-        {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(Vector3.forward), 0.2f);
-            transform.position += Vector3.forward * Time.deltaTime * _speed;
-        }
-        if (Input.GetKey(KeyCode.S))
-        {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(Vector3.back), 0.2f);
-            transform.position += Vector3.back * Time.deltaTime * _speed;
-        }
-        if (Input.GetKey(KeyCode.A))
-        {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(Vector3.left), 0.2f);
-            transform.position += Vector3.left * Time.deltaTime * _speed;
-        }
-        if (Input.GetKey(KeyCode.D))
-        {
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(Vector3.right), 0.2f);
-            transform.position += Vector3.right * Time.deltaTime * _speed;
-        }
-    }
-
+    //Ground와 Monster를 Layermask
+    int _mask = (1 << (int)Define.Layer.Ground) | (1 << (int)Define.Layer.Monster);
     void OnMouseClicked(Define.MouseEvent evt)
     {
         if(_state == PlayerState.Die)
@@ -139,11 +117,20 @@ public class PlayerController : MonoBehaviour
 
         //wall인 경우에만 마우스 입력을 받아서 플레이어가 움직일 수 있게 함.
         RaycastHit hit;
-        if (Physics.Raycast(ray, out hit, 100.0f, LayerMask.GetMask("Wall")))
+        if (Physics.Raycast(ray, out hit, 100.0f, _mask))
         {
             _destpos = hit.point;
             _destpos.y = transform.position.y;
             _state = PlayerState.Moving;
+
+            if (hit.collider.gameObject.layer == (int)Define.Layer.Monster)
+            {
+                Debug.Log("Monster Clicked!");
+            }
+            else
+            {
+                Debug.Log("Ground Clicked!");
+            }
         }
     }
 }

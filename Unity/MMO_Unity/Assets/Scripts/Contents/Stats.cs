@@ -5,22 +5,35 @@ using UnityEngine;
 public class Stats : MonoBehaviour
 {
     [SerializeField]
-    int _level;
+    protected int _level;
     [SerializeField]
-    int _hp;
+    protected int _hp;
     [SerializeField]
-    int _maxHp;
+    protected int _maxHp;
     [SerializeField]
-    int _attack;
+    protected int _attack;
     [SerializeField]
-    int _defense;
+    protected int _defense;
     [SerializeField]
-    float _movespeed;
+    protected float _movespeed;
 
     public int Level { get { return _level; } set { _level = value; } }
     public int HP { get { return _hp; } set { _hp = value; } }
     public int MaxHp { get { return _maxHp; } set { _maxHp = value; } }
     public int Attack { get { return _attack; } set { _attack = value; } }
     public int Defense { get { return _defense; } set { _defense = value; } }
-    public float Speed { get { return _movespeed; } set { _movespeed = value; } }
+    public float MoveSpeed { get { return _movespeed; } set { _movespeed = value; } }
+
+    private void Start()
+    {
+        _level = 1;
+        _hp = 100;
+        _maxHp = 100;
+        _attack = 10;
+        _defense = 10;
+        _movespeed = 5.0f;
+    }
+
+
+
 }
