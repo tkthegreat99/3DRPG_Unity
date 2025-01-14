@@ -65,6 +65,7 @@ public class PlayerController : MonoBehaviour
 
             //transform.position += dir.normalized * moveDist;
 
+            //Quaternion.Slerp 는 부드러운 회전을 제공해준다.
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), 10 * Time.deltaTime);
         }
 
