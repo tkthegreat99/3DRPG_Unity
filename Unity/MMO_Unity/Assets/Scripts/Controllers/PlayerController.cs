@@ -17,6 +17,7 @@ public class PlayerController : BaseController
     bool _stopSkill = false;
     public override void Init()
     {
+        WorldObjectType = Define.WorldObject.Player;
         _stat = gameObject.GetComponent<PlayerStat>();
         Managers.Input.MouseAction -= OnMouseEvent; //처음에 빼주는 이유은 중복 구독신청 될까봐.
         Managers.Input.MouseAction += OnMouseEvent;

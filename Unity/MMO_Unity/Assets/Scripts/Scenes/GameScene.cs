@@ -17,6 +17,13 @@ public class GameScene : BaseScene
         Dictionary<int, Data.Stat> dict = Managers.Data.StatDict;
 
         gameObject.GetOrAddComponent<CursorController>();
+
+        GameObject player = Managers.Game.Spawn(Define.WorldObject.Player, "Unitychan");
+        Camera.main.gameObject.GetOrAddComponent<CameraController>().SetPlayer(player);
+
+        Debug.Log("CameraSetting");
+
+        Managers.Game.Spawn(Define.WorldObject.Monster, "Enemy");
     }
 
     IEnumerator CoStopExplode(float seconds)

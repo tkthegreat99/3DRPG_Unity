@@ -16,6 +16,7 @@ public class MonsterController : BaseController
     float _attackRange = 2;
     public override void Init()
     {
+        WorldObjectType = Define.WorldObject.Monster;
         _stat = gameObject.GetComponent<Stats>();
 
         if(gameObject.GetComponentInChildren<UI_HpBar>() == null)
@@ -97,6 +98,10 @@ public class MonsterController : BaseController
             int damage = Mathf.Max(0, _stat.Attack - targetStat.Defense);
             targetStat.HP -= damage;
 
+            if(targetStat.HP <= 0)
+            {
+                Managers.Game.Despawn(targetStat.gameObject);
+            }
 
 
             if(targetStat.HP > 0)
