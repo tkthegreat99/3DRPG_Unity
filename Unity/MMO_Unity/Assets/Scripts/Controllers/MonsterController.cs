@@ -94,11 +94,11 @@ public class MonsterController : BaseController
         if(_locktarget != null)
         {
             Stats targetStat = _locktarget.GetComponent<Stats>();
-            Stats myStat = gameObject.GetComponent<Stats>();
-            int damage = Mathf.Max(0, myStat.Attack - targetStat.Defense);
+            int damage = Mathf.Max(0, _stat.Attack - targetStat.Defense);
             targetStat.HP -= damage;
 
-            Debug.Log(targetStat.HP);
+
+
             if(targetStat.HP > 0)
             {
                 float distance = (_locktarget.transform.position - transform.position).magnitude;
