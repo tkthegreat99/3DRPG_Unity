@@ -10,22 +10,10 @@ public class PlayerController : MonoBehaviour
 {
     PlayerStat _stat;
     Vector3 _destpos;
-    Texture2D _attackicon;
-    Texture2D _handicon;
-
-    enum CursorType
-    {
-        None,
-        Attack,
-        Hand,
-    }
-
-    CursorType _cursorType = CursorType.None;
+    
 
     void Start()
     {
-        _attackicon = Managers.Resource.Load<Texture2D>("Textures/Cursor/Attack");
-        _handicon = Managers.Resource.Load<Texture2D>("Textures/Cursor/Hand");
         _stat = gameObject.GetComponent<PlayerStat>();
 
         Managers.Input.MouseAction -= OnMouseEvent; //처음에 빼주는 이유은 중복 구독신청 될까봐.
@@ -34,15 +22,42 @@ public class PlayerController : MonoBehaviour
 
 
     public enum PlayerState
-    {
+    {   
         Die,
         Moving,
         Idle,
         Skill,
     }
 
+    [SerializeField]
     PlayerState _state= PlayerState.Idle;
 
+    public PlayerState State
+    {
+        get { return _state; }
+        set
+        {
+            _state = value;
+            Animator anim = GetComponent<Animator>();
+            switch(_state)
+            {
+                case PlayerState.Idle:
+                    anim.SetFloat("speed", 0);
+                    anim.SetBool("attack", false);
+                    break;
+                case PlayerState.Die:
+                    anim.SetBool("attack", false);
+                    break;
+                case PlayerState.Moving:
+                    anim.SetFloat("speed", _stat.MoveSpeed);
+                    anim.SetBool("attack", false);
+                    break;
+                case PlayerState.Skill:
+                    anim.SetBool("attack", true);
+                    break;
+            }
+        }
+    }
 
     void UpdateDie()
     {
@@ -51,10 +66,22 @@ public class PlayerController : MonoBehaviour
 
     void UpdateMoving()
     {
+        // 몬스터가 내 사정거리보다 가까우면 공격
+        if(_locktarget != null)
+        {
+            float distance = (_destpos - transform.position).magnitude;
+            if(distance <= 1)
+            {
+                State = PlayerState.Skill;
+                return;
+            }
+        }
+
+        //이동
         Vector3 dir = _destpos - transform.position;
         if (dir.magnitude < 0.1f)
         {
-            _state = PlayerState.Idle;
+            State = PlayerState.Idle;
         }
         else
         {
@@ -72,7 +99,7 @@ public class PlayerController : MonoBehaviour
             if (Physics.Raycast(transform.position + Vector3.up * 0.5f, dir, 1.0f, _mask))
             {
                 if(Input.GetMouseButton(0) == false)
-                    _state = PlayerState.Idle;
+                    State = PlayerState.Idle;
                 return;
             }
 
@@ -101,11 +128,25 @@ public class PlayerController : MonoBehaviour
         anim.SetFloat("speed", 0);
     }
 
+    void UpdateSkill()
+    {
+        Animator anim = GetComponent<Animator>();
+
+        anim.SetBool("attack", true);
+    }
+
+    //animation event에서 내가 추가한 event.
+    void OnHitEvent()
+    {
+        Animator anim = GetComponent<Animator>();
+
+        State = PlayerState.Moving;
+    }
+
     void Update()
     {
-        UpdateMouseCursor();
 
-        switch(_state)
+        switch(State)
         {
             case PlayerState.Idle:
                 UpdateIdle();
@@ -116,48 +157,20 @@ public class PlayerController : MonoBehaviour
             case PlayerState.Moving:
                 UpdateMoving();
                 break;
+            case PlayerState.Skill:
+                UpdateSkill();
+                break;
         }        
     }
 
-    void UpdateMouseCursor()
-    {
-        if (Input.GetMouseButton(0))
-            return;
-
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-                
-        RaycastHit hit;
-        if (Physics.Raycast(ray, out hit, 100.0f, _mask))
-        {
-            if (hit.collider.gameObject.layer == (int)Define.Layer.Monster)
-            {
-                if (_cursorType != CursorType.Attack)
-                {
-                    Cursor.SetCursor(_attackicon, new Vector2(_attackicon.width / 5, 0), CursorMode.Auto);
-                    _cursorType = CursorType.Attack;
-                }
-                // 커서 모양이 칼 모양인데 왼쪽 위로부터 칼 끝이 1/5 정도 밀려나있어서 보정.
-            }
-            else
-            {
-                if(_cursorType != CursorType.Hand)
-                {
-                    Cursor.SetCursor(_handicon, new Vector2(_handicon.width / 3, 0), CursorMode.Auto);
-                    _cursorType = CursorType.Hand;
-                }
-                
-            }
-        }
-    }
-
-
+    
     GameObject _locktarget;
 
     //Ground와 Monster를 Layermask
     int _mask = (1 << (int)Define.Layer.Ground) | (1 << (int)Define.Layer.Monster);
     void OnMouseEvent(Define.MouseEvent evt)
     {
-        if(_state == PlayerState.Die)
+        if(State == PlayerState.Die)
             return;
         RaycastHit hit;
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -171,7 +184,7 @@ public class PlayerController : MonoBehaviour
                     {
                         _destpos = hit.point;
                         _destpos.y = transform.position.y;
-                        _state = PlayerState.Moving;
+                        State = PlayerState.Moving;
 
                         if (hit.collider.gameObject.layer == (int)Define.Layer.Monster)
                             _locktarget = hit.collider.gameObject;
@@ -179,9 +192,6 @@ public class PlayerController : MonoBehaviour
                             _locktarget = null;       
                     }
                 }
-                break;
-            case Define.MouseEvent.PointerUp:
-                _locktarget = null;
                 break;
             case Define.MouseEvent.Press:
                 {
