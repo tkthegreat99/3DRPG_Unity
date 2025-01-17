@@ -8,29 +8,25 @@ using UnityEngine.AI;
 
 public class PlayerController : MonoBehaviour
 {
-    PlayerStat _stat;
-    Vector3 _destpos;
-    
-
-    void Start()
-    {
-        _stat = gameObject.GetComponent<PlayerStat>();
-
-        Managers.Input.MouseAction -= OnMouseEvent; //처음에 빼주는 이유은 중복 구독신청 될까봐.
-        Managers.Input.MouseAction += OnMouseEvent;        
-    }
-
 
     public enum PlayerState
-    {   
+    {
         Die,
         Moving,
         Idle,
         Skill,
     }
 
+    PlayerStat _stat;
+    Vector3 _destpos;
+
     [SerializeField]
-    PlayerState _state= PlayerState.Idle;
+    PlayerState _state = PlayerState.Idle;
+
+    GameObject _locktarget;
+
+    //Ground와 Monster를 Layermask
+    int _mask = (1 << (int)Define.Layer.Ground) | (1 << (int)Define.Layer.Monster);
 
     public PlayerState State
     {
@@ -39,24 +35,33 @@ public class PlayerController : MonoBehaviour
         {
             _state = value;
             Animator anim = GetComponent<Animator>();
-            switch(_state)
+            switch (_state)
             {
+
+                //animator에서 파라미터들을 활용해도 되지만 이렇게 바로 State를 이용해서 할 수도 있음
+                //anim.Play는 단순 재생이지만, CrossFade 는 블렌드 기능을 제공.
                 case PlayerState.Idle:
-                    anim.SetFloat("speed", 0);
-                    anim.SetBool("attack", false);
+                    anim.CrossFade("WAIT", 0.1f);
                     break;
                 case PlayerState.Die:
-                    anim.SetBool("attack", false);
                     break;
                 case PlayerState.Moving:
-                    anim.SetFloat("speed", _stat.MoveSpeed);
-                    anim.SetBool("attack", false);
+                    anim.CrossFade("RUN", 0.1f);
                     break;
                 case PlayerState.Skill:
-                    anim.SetBool("attack", true);
+                    anim.CrossFade("ATTACK", 0.1f, -1, 0);
+                    //0으로 해주면 처음부터 애니메이션을 실행. Loop 기능과 동일.
                     break;
             }
         }
+    }
+
+    void Start()
+    {
+        _stat = gameObject.GetComponent<PlayerStat>();
+
+        Managers.Input.MouseAction -= OnMouseEvent; //처음에 빼주는 이유은 중복 구독신청 될까봐.
+        Managers.Input.MouseAction += OnMouseEvent;        
     }
 
     void UpdateDie()
@@ -108,31 +113,27 @@ public class PlayerController : MonoBehaviour
             //Quaternion.Slerp 는 부드러운 회전을 제공해준다.
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), 10 * Time.deltaTime);
         }
-
-        //애니메이션
-
-        Animator anim = GetComponent<Animator>();
-        anim.SetFloat("speed", _stat.MoveSpeed);
     }
 
     void OnRunEvent()
     {
-        Debug.Log("WalkWalk");
+        
     }
 
     void UpdateIdle()
     {
-        //애니메이션
 
-        Animator anim = GetComponent<Animator>();
-        anim.SetFloat("speed", 0);
+        
     }
 
     void UpdateSkill()
     {
-        Animator anim = GetComponent<Animator>();
-
-        anim.SetBool("attack", true);
+      if(_locktarget != null)
+        {
+            Vector3 dir = _locktarget.transform.position - transform.position;
+            Quaternion quat = Quaternion.LookRotation(dir);
+            transform.rotation = Quaternion.Lerp(transform.rotation, quat, 20 * Time.deltaTime);
+        }
     }
 
     //animation event에서 내가 추가한 event.
@@ -140,7 +141,15 @@ public class PlayerController : MonoBehaviour
     {
         Animator anim = GetComponent<Animator>();
 
-        State = PlayerState.Moving;
+        if(_stopSkill)
+        {
+            State = PlayerState.Idle;
+        }
+        else
+        {
+            State = PlayerState.Skill;
+        }
+
     }
 
     void Update()
@@ -163,46 +172,60 @@ public class PlayerController : MonoBehaviour
         }        
     }
 
-    
-    GameObject _locktarget;
-
-    //Ground와 Monster를 Layermask
-    int _mask = (1 << (int)Define.Layer.Ground) | (1 << (int)Define.Layer.Monster);
+    bool _stopSkill = false;
     void OnMouseEvent(Define.MouseEvent evt)
     {
-        if(State == PlayerState.Die)
-            return;
+        switch(State)
+        {
+            case PlayerState.Idle:
+                OnMouseEvent_IdleRun(evt);
+                break;
+            case PlayerState.Moving:
+                OnMouseEvent_IdleRun(evt);
+                break;
+            case PlayerState.Skill:
+                {
+                    if(evt == Define.MouseEvent.PointerUp)
+                        _stopSkill = true;
+                }
+                break;
+        }
+        
+    }
+
+    void OnMouseEvent_IdleRun(Define.MouseEvent evt)
+    {
         RaycastHit hit;
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         bool raycastHit = Physics.Raycast(ray, out hit, 100.0f, _mask);
 
-        switch(evt)
+        switch (evt)
         {
             case Define.MouseEvent.PointerDown:
                 {
-                    if(raycastHit)
+                    if (raycastHit)
                     {
                         _destpos = hit.point;
                         _destpos.y = transform.position.y;
                         State = PlayerState.Moving;
+                        _stopSkill = false;
 
                         if (hit.collider.gameObject.layer == (int)Define.Layer.Monster)
                             _locktarget = hit.collider.gameObject;
                         else
-                            _locktarget = null;       
+                            _locktarget = null;
                     }
                 }
                 break;
             case Define.MouseEvent.Press:
                 {
-                    if (_locktarget != null)
-                    {
-                        _destpos = _locktarget.transform.position;
-                    }
-                    else if (raycastHit)
+                    if (_locktarget == null && raycastHit)
                         _destpos = hit.point;
                 }
                 break;
-        }     
+            case Define.MouseEvent.PointerUp:
+                _stopSkill = true;
+                break;
+        }
     }
 }
