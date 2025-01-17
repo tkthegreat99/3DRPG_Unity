@@ -45,13 +45,6 @@ public class PlayerController : BaseController
         }
         else
         {
-            NavMeshAgent nma = gameObject.GetOrAddComponent<NavMeshAgent>();
-
-            float moveDist = Mathf.Clamp(_stat.MoveSpeed * Time.deltaTime, 0, dir.magnitude);
-            
-            nma.Move(dir.normalized * moveDist);
-
-
             Debug.DrawRay(transform.position + Vector3.up * 0.5f, dir.normalized, Color.red);
 
             int _mask = (1 << (int)Define.Layer.Blocking);
@@ -63,8 +56,8 @@ public class PlayerController : BaseController
                 return;
             }
 
-            //transform.position += dir.normalized * moveDist;
-
+            float moveDist = Mathf.Clamp(_stat.MoveSpeed * Time.deltaTime, 0, dir.magnitude);
+            transform.position += dir.normalized * moveDist;
             //Quaternion.Slerp 는 부드러운 회전을 제공해준다.
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), 10 * Time.deltaTime);
         }
@@ -93,7 +86,6 @@ public class PlayerController : BaseController
             Stats targetStat = _locktarget.GetComponent<Stats>();
             PlayerStat myStat = gameObject.GetComponent<PlayerStat>();
             int damage = Mathf.Max(0, myStat.Attack - targetStat.Defense);
-            Debug.Log(damage);
             targetStat.HP -= damage;
         }
         if(_stopSkill)
