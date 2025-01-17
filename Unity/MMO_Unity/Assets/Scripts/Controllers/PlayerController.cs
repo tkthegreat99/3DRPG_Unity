@@ -141,8 +141,14 @@ public class PlayerController : MonoBehaviour
     //animation event에서 내가 추가한 event.
     void OnHitEvent()
     {
-        Animator anim = GetComponent<Animator>();
-
+        if(_locktarget != null)
+        {
+            Stats targetStat = _locktarget.GetComponent<Stats>();
+            PlayerStat myStat = gameObject.GetComponent<PlayerStat>();
+            int damage = Mathf.Max(0, myStat.Attack - targetStat.Defense);
+            Debug.Log(damage);
+            targetStat.HP -= damage;
+        }
         if(_stopSkill)
         {
             State = PlayerState.Idle;
