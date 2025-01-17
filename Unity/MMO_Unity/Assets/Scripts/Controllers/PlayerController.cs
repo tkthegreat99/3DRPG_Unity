@@ -61,7 +61,9 @@ public class PlayerController : MonoBehaviour
         _stat = gameObject.GetComponent<PlayerStat>();
 
         Managers.Input.MouseAction -= OnMouseEvent; //처음에 빼주는 이유은 중복 구독신청 될까봐.
-        Managers.Input.MouseAction += OnMouseEvent;        
+        Managers.Input.MouseAction += OnMouseEvent;
+
+        Managers.UI.MakeWorldSpaceUI<UI_HpBar>(transform);
     }
 
     void UpdateDie()
