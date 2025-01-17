@@ -26,8 +26,8 @@ public class MonsterController : BaseController
     protected override void UpdateIdle()
     {
 
-        //TODO
-        GameObject player = GameObject.FindGameObjectWithTag("Player"); // tag로 플레이어 찾기
+        GameObject player = Managers.Game.GetPlayer();
+        //GameObject player = GameObject.FindGameObjectWithTag("Player"); // tag로 플레이어 찾기
         if (player == null)
             return;
 
@@ -95,14 +95,7 @@ public class MonsterController : BaseController
         if(_locktarget != null)
         {
             Stats targetStat = _locktarget.GetComponent<Stats>();
-            int damage = Mathf.Max(0, _stat.Attack - targetStat.Defense);
-            targetStat.HP -= damage;
-
-            if(targetStat.HP <= 0)
-            {
-                Managers.Game.Despawn(targetStat.gameObject);
-            }
-
+            targetStat.OnAttacked(_stat);
 
             if(targetStat.HP > 0)
             {
